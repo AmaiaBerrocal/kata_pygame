@@ -3,95 +3,11 @@ from pygame import *   #podemos usar la clase de pygame sin poner nada delante
 from pygame.locals import * #contiene varias constantes como las teclas
 import sys
 from random import randint
+from entities import *
 
 #inicializamos pygame
 init()
-FPS = 60
 
-class Bomb:
-    pictures = ['bomb_01.png', 'bomb_02.png', 'bomb_03.png', 'bomb_04.png']
-  
-    def __init__(self, x=0, y=0):
-        self.x = x
-        self.y = y
-        
-        self.frames = []
-        for pict in self.pictures:
-            frame = image.load('resources/{}'.format(pict)).convert_alpha()
-            self.frames.append(frame)
-            
-        self.frame_act = 0
-        self.num_frames = len(self.frames)
-        
-        self.current_time = 0
-        self.animation_time = FPS//4
-
-
-    def update(self, dt):
-        self.current_time += dt
-        if self.current_time <= self.animation_time:
-            self.frame_act += 1
-            if self.frame_act == self.num_frames:
-                self.frame_act = 0
-    
-
-    @property
-    def position(self):
-        return self.x, self.y
-
-    @property
-    def image(self):
-        return self.frames[self.frame_act]
-
-
-class Robot:
-    speed = 5
-    pictures = ['robot_r01.png', 'robot_r02.png', 'robot_r03.png', 'robot_r04.png']
-
-    def __init__(self, x=0, y=0):
-        self.x = x
-        self.y = y
-        
-        self.frames = []
-        for pict in self.pictures:
-            frame = image.load('resources/{}'.format(pict)).convert_alpha()
-            self.frames.append(frame)
-        #self.frames = [image.load('resources/{}'.format(pict)).convert_alpha() for pict in self.pictures]   es el mismo for que arriba
-        
-        self.frame_act = 0
-        self.num_frames = len(self.frames)
-
-    def change_frame(self):
-        self.frame_act += 1
-        if self.frame_act == self.num_frames:
-            self.frame_act = 0
-        #self.frame_act = (self.frame_act + 1) % self.num_frames  equivale a las 3 lineas de arriba. si frame_act=0, le voy a sumar 1. 1/4 el resto es 1. 2/4 resto 2, 3/4 resto 3, 4/4 resto 0: vuelve a posicion cero
-
-    def go_up(self):
-        #if self.y > 0:
-        #   self.y -= self.speed
-        self.y = max(0, self.y - self.speed) #self.y es el maximo entre self.y menos speed. Si self.y=100 va a ser el max entre 0 y 95, asi que sera 95. Si self.y=0 el max entre 0 y -5 es 0.
-        self.change_frame()
-
-    def go_down(self):
-        self.y = min(600, self.y + self.speed)
-        self.change_frame()
-
-    def go_left(self):
-        self.x = max(0, self.x - self.speed)
-        self.change_frame()
-
-    def go_right(self):
-        self.x = min(800, self.x + self.speed)
-        self.change_frame()
-
-    @property
-    def position(self):
-        return self.x, self.y
-
-    @property
-    def image(self):
-        return self.frames[self.frame_act]
 
 class Game:
     clock = time.Clock()
@@ -102,12 +18,18 @@ class Game:
 
         self.background_color = (150, 150, 222)
 
-        self.robot = Robot(400, 300)
+        self.player_group = sprite.Group()
+        self.bombs_group = sprite.Group()
+        self.all_group = sprite.Group()
 
-        self.bombas = []
+        self.robot = Robot(400, 300)
+        self.player_group.add(self.robot)
+        
         for i in range(5):
-            self.bomb = Bomb(randint(0,750), randint(0,550))
-            self.bombas.append(self.bomb)
+            bomb = Bomb(randint(0,750), randint(0,550))
+            self.bombs_group.add(bomb)
+
+        self.all_group.add(self.robot, self.bombs_group)
 
     def gameOver(self):
         quit()
@@ -138,20 +60,22 @@ class Game:
         if keys_pressed[K_RIGHT]:
             self.robot.go_right()
 
-    
     def mainloop(self):
         while True:
             dt = self.clock.tick(FPS)
             
             self.handleEvents()
+            
+            if self.robot.comprobarToques(self.bombs_group) == 0: #obtenemos el numero de vidas y desde aqui si podemos llamar a gameOver
+                self.gameOver()
                             
             self.screen.fill(self.background_color) #rellena la pantalla con el color de fondo
-            self.screen.blit(self.robot.image, self.robot.position) #posiciona el robot en la pantalla
-            for b in self.bombas:
-                b.update(dt)
-                self.screen.blit(b.image, b.position)
+           
+            self.all_group.update(dt)
+            self.all_group.draw(self.screen)
 
             display.flip() #refresca o redibuja
+
 
 if __name__ == '__main__':
     game = Game()
