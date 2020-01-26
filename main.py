@@ -18,7 +18,6 @@ class Bomb(sprite.Sprite):
         self.y = y
 
         sprite.Sprite.__init__(self)
-
         self.rect = Rect(self.x, self.y, self.w, self.h)
         
         self.frames = []
@@ -32,7 +31,6 @@ class Bomb(sprite.Sprite):
         self.current_time = 0
         self.animation_time = FPS//60
 
-
     def update(self, dt):
         self.current_time += dt
         if self.current_time >= self.animation_time:
@@ -41,9 +39,6 @@ class Bomb(sprite.Sprite):
             if self.frame_act == self.num_frames:
                 self.frame_act = 0
     
-    def position(self):
-        return self.rect.x, self.rect.y
-
     @property
     def image(self):
         return self.frames[self.frame_act]
@@ -54,6 +49,7 @@ class Robot(sprite.Sprite):
     pictures = ['robot_r01.png', 'robot_r02.png', 'robot_r03.png', 'robot_r04.png']
     w = 64
     h = 68
+    lives = 3
 
     def __init__(self, x=0, y=0):
         self.x = x
@@ -78,8 +74,6 @@ class Robot(sprite.Sprite):
         #self.frame_act = (self.frame_act + 1) % self.num_frames  equivale a las 3 lineas de arriba. si frame_act=0, le voy a sumar 1. 1/4 el resto es 1. 2/4 resto 2, 3/4 resto 3, 4/4 resto 0: vuelve a posicion cero
 
     def go_up(self):
-        #if self.y > 0:
-        #   self.y -= self.speed
         self.rect.y = max(0, self.rect.y - self.speed) #self.y es el maximo entre self.y menos speed. Si self.y=100 va a ser el max entre 0 y 95, asi que sera 95. Si self.y=0 el max entre 0 y -5 es 0.
         self.change_frame()
 
@@ -95,12 +89,16 @@ class Robot(sprite.Sprite):
         self.rect.x = min(800, self.rect.x + self.speed)
         self.change_frame()
 
-    def position(self):
-        return self.rect.x, self.rect.y
+    def comprobarToques(self, group):
+        colisiones = sprite.spritecollide(self, group, True)
+        for b in colisiones:
+            self.lives -= 1
+        return self.lives #desde aqui no podemos llamar a gameOver porque esta en Game, por eso devolvemos el numero de vidas
 
     @property
     def image(self):
         return self.frames[self.frame_act]
+
 
 class Game:
     clock = time.Clock()
@@ -117,7 +115,7 @@ class Game:
 
         self.robot = Robot(400, 300)
         self.player_group.add(self.robot)
-
+        
         for i in range(5):
             bomb = Bomb(randint(0,750), randint(0,550))
             self.bombs_group.add(bomb)
@@ -153,21 +151,17 @@ class Game:
         if keys_pressed[K_RIGHT]:
             self.robot.go_right()
 
-    
     def mainloop(self):
         while True:
             dt = self.clock.tick(FPS)
             
             self.handleEvents()
+            
+            if self.robot.comprobarToques(self.bombs_group) == 0: #obtenemos el numero de vidas y desde aqui si podemos llamar a gameOver
+                self.gameOver()
                             
             self.screen.fill(self.background_color) #rellena la pantalla con el color de fondo
-            
-            '''
-            self.screen.blit(self.robot.image, self.robot.position) #posiciona el robot en la pantalla
-            for b in self.bombas:
-                b.update(dt)
-                self.screen.blit(b.image, b.position)
-            '''
+           
             self.all_group.update(dt)
             self.all_group.draw(self.screen)
 
